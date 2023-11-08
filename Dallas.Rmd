@@ -1,0 +1,291 @@
+---
+title: '2212063'
+author: "ALEEMUDDIN MD"
+date: "2023-04-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+#### We have access to a data set that contains instances of criminal event cases that took place in Dallas, Texas, USA, during 2016, as well as details about the officer in question, their location, race, time, and other factors.We will make an effort to generate facts and arguments based on the data we have gathered in order to aid in the improvement of the legal system in Dallas, Texas. Then, we shall present these arguments and the arguments' supporting data.The data includes details on 2384 occurrences and 47 factors. Infractions between January 1 and December 31, 2016, were reported as 2382.
+
+```{r message=FALSE, warning=FALSE}
+# Loaded the libraries
+library(dplyr)
+library(tidyverse)
+library(ggplot2)
+library(leaflet)
+library(plotly)
+library(hrbrthemes)
+library(ggcorrplot)
+library(RColorBrewer)
+```
+
+```{r}
+#Loading the dataset
+DateTime<- read.csv("C:/Users/MD ALEEMUDDIN/Desktop/ESSEX PROJECTS/MA304/37-00049_UOF-P_2016_prepped.csv")
+
+#Removing the 1 row from the dataset to build clean Data set
+DateTime <- DateTime[-1,]
+```
+
+### Converting the time and Date to valid format
+
+```{r}
+#Date time
+DateTime$INCIDENT_DATE <- as.Date(DateTime$INCIDENT_DATE, format = "%m/%d/%Y")
+DateTime$INCIDENT_DATE <- gsub("00","20",DateTime$INCIDENT_DATE)
+DateTime$INCIDENT_DATE <- as.Date(DateTime$INCIDENT_DATE, format = "%Y-%m-%d")
+DateTime$INCIDENT_TIME <- format(strptime(DateTime$INCIDENT_TIME, "%I:%M:%S %p"), "%H:%M:%S")
+DateTime$INCIDENT_MONTH <- months(as.Date(DateTime$INCIDENT_DATE))
+DateTime$INC_MONTH <-format(DateTime$INCIDENT_DATE,"%m")
+
+```
+
+##  Subject Gender vs Subject Race
+
+#### We will demonstrate the relationship between Subject Race and Subject Gender in the line of code below.We can see from this that the majority of men are black.
+
+```{r}
+#Barplot for subject gender and subject race 
+barPlot<- DateTime %>%group_by(SUBJECT_GENDER,SUBJECT_RACE) %>%
+  summarize(count=n())
+  ggplot(DateTime,aes(x =factor(SUBJECT_GENDER,level=c("Female","Male")),fill=SUBJECT_RACE))+
+  geom_bar()+
+  theme_bw()+
+  labs(title = "Subject GENDER and subject RACE",
+       x = "Subject Gender",
+       y = "Frequency")
+```
+
+## Officers Years On Force
+
+#### The histogram below shows that the majority of the officers had experience up to 10 years after the decline began.
+
+```{r}
+#Histogram of Officer years on force
+ggplot(DateTime, aes(factor(OFFICER_YEARS_ON_FORCE,level =c(1:36))))+
+  geom_bar(fill="green")+theme(axis.text.x = element_text(angle =45 ,size = 10)) +labs(title="Histogram of Officer years on force",
+       x= "Officer's On The Force at Time",
+       y="Officer count")
+```
+
+## Barplot plotted between Officer Injury and Officer gender
+
+#### We might infer from the plot below that about 250 White officers suffered injuries when interacting with people.
+
+```{r}
+#putting together a pub plot with cop injury versus gender and filling in with officer race
+
+DateTime %>% group_by(OFFICER_INJURY,OFFICER_GENDER)%>%
+  summarise(count = n ())
+ggplot(DateTime,aes(x =OFFICER_INJURY,fill=OFFICER_RACE))+
+  geom_bar()+
+  theme_bw()+
+  labs(title="Which type of policemen have Injuries",
+       x= "OFFICER INJURY",
+       y="Officer count")
+```
+
+## Table
+
+#### From the table we can depict that Male Black Subject are in very high number.
+
+```{r}
+#Table for subject gender and subject race
+table(DateTime$SUBJECT_GENDER,DateTime$SUBJECT_RACE)
+```
+
+### Boxplot shown for Location District and Incident date.
+
+
+#### From the below plot we can see that most number of arrest happened in the month of oct in D9 district.
+```{r}
+#For Location District Vs Inc_Month, fill the box with the suspect who was arrested.
+
+ggplot(DateTime, aes(LOCATION_DISTRICT, INCIDENT_DATE,fill=SUBJECT_WAS_ARRESTED)) +
+  geom_boxplot()+
+  labs(title="Location District Vs Incident per Month",
+       x= "District",
+       y="Incident count")
+```
+
+### Scatter Plot of Location District and Incident Reason
+
+#### As mentioned in the above plot that very large number of arrest happened in the district of 14 .as per the plot we can analize that in Accidental Distacahrge Occured in only District 6.also we can analize that in most up the case on subject arrested on traffic stop.Number of arrested subjects are between d8 to d10 is very low compaire to other district.
+
+```{r}
+#Location district, incident date, and filled with person was arrested on scatter plot
+
+ggplot(DateTime, aes(factor(LOCATION_DISTRICT,levels = c("D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14")), INCIDENT_REASON,fill=SUBJECT_WAS_ARRESTED,color=SUBJECT_WAS_ARRESTED)) +
+  geom_jitter()+
+  labs(title="Location District Vs Incident per Month",
+       x= "District",
+       y="Incident Reason")
+ 
+```
+
+## Correlation between Subject Race and Subject Description
+
+#### The bulk of people of the Black Race are more involved in the activity, as shown by the code below.
+
+```{r}
+#How many incident happened in a month because of the Subject Description 
+track <- DateTime %>%
+  group_by(SUBJECT_RACE,TYPE_OF_FORCE_USED1) %>%
+  dplyr::summarize(count = n())
+
+ggplot(track,aes(x = SUBJECT_RACE,fill=TYPE_OF_FORCE_USED1))+geom_bar()+labs(x="Subjects Race")+theme(axis.text.x = element_text(angle = 45, size = 08))
+```
+
+### Map
+```{r}
+
+```
+
+#### The map shows the location of Districts.
+
+```{r}
+#Maps 
+dall_map<- DateTime[sample(nrow(DateTime),30),]
+
+dall_map$LOCATION_LATITUDE <- as.numeric(dall_map$LOCATION_LATITUDE)
+dall_map$LOCATION_LONGITUDE <- as.numeric(dall_map$LOCATION_LONGITUDE)
+
+mark<- leaflet(dall_map)%>%
+  addTiles()
+  mark %>% addMarkers(lng = ~dall_map$LOCATION_LONGITUDE,lat = ~dall_map$LOCATION_LATITUDE,popup = ~paste("DISTRICT NUMBER: *",LOCATION_DISTRICT))
+  
+```
+
+## Time Series of Incident Date and Month
+
+#### The event reports suggest that overall there may have been fewer incidents in 2016.Peaks between 17:00 and 20:00, when several incidents were recorded, and around 02:00, when about 150 instances were reported, were also seen. The lowest temperatures were recorded about 7:00 in the morning and between 4:00 and 10:00 in the morning.
+
+<br>
+
+#### The most cases were reported in March and February, with roughly 259 and 250 cases, respectively. The fewest occurrences---only 97---were reported in December.
+
+<br>
+
+#### Illustrates the distribution of all infractions and their total number. There is a noticeable right skewness in the occurrence count for the full year. Two to three instances per day are where the distribution of occurrences peaks, whereas incidences more than 25 per day are less noticeable.
+
+```{r}
+#TIME SERIES FOR THE INCIDENT DATE AND THE INCIDENT MONTH
+dall_year <-  DateTime %>%
+  group_by(INCIDENT_DATE,INCIDENT_MONTH) %>%
+  summarize(count = n())
+
+dall_month <-  DateTime %>%
+  group_by(INC_MONTH) %>%
+  summarize(count = n())
+
+dall_day <-  DateTime %>%
+  group_by(INCIDENT_DATE,INCIDENT_MONTH) %>%
+  summarize(count = n())
+
+DateTime$INCIDENT_HOUR <- substr(DateTime$INCIDENT_TIME, 0, 2)
+
+DateTime   %>% group_by(INCIDENT_HOUR) %>%
+  summarize(avg =n()) -> dall_hour
+
+y1 <- ggplot(data = dall_year, aes(INCIDENT_DATE, count)) +   geom_line(size=0.5, col="gray") +
+  geom_smooth(method = "loess", color = "red", span = 1/5) + theme_bw() + labs(x="Months ", y= "INCIDENT COUNTS", title="1.a Year vs Incidents")
+
+y1
+
+m1 <- ggplot(dall_month, aes(x=INC_MONTH, y =count, group=1)) + geom_line()  + geom_line( size = 1,colour ="steelblue") + labs(x="MONTHS OF 2016", y= "INCIDENT COUNTS", title="1.b Months vs  Incident Rates")  + theme_bw()
+
+m1
+
+h1 <- ggplot(dall_hour, aes(x = INCIDENT_HOUR, y = avg, group = "count")) + geom_line( size = 1, colour = "orange") + labs(x="HOURS IN A DAY", y= "INCIDENT COUNTS", title="1.c Hours vs  Incident Rates")+ theme_bw() +
+  theme(axis.text.x=element_text(angle=-90, vjust=0.5)) +
+  
+  labs(x = "Hour of the day", y = "count") + theme_bw()
+
+h1
+
+y2 <- ggplot(dall_year, aes(count)) +
+  geom_density(alpha = 0.5, colour = "black", fill ="blue")+ labs(x="Incident counts", y= "Density", title="1.d Distribuion of incident rates") + theme_bw()
+
+y2
+
+
+
+```
+
+### Analysis of Officer Injury and Officer Race
+
+##### The relationship between Officer Race and Injury, which is filled by Gender, is depicted in the plot below. This shows that the majority of male officers who are White, Other, and Hispanic are injured.
+
+```{r cars}
+#BOX PLOT
+ggplot(DateTime,aes(OFFICER_INJURY,OFFICER_RACE,fill=OFFICER_GENDER,group=OFFICER_GENDER))+geom_boxplot()+theme_minimal()+ labs(title="Officers Injury Vs Officer Race",
+       x= "Officer Race",
+       y= "Officers Injury")
+```
+
+### Analysis of Subject Arrest and Subject Gender
+
+#### The plot below demonstrates that most of the subjects are male, are black, and that there were a lot of persons held.
+
+```{r}
+
+ggplot(DateTime,aes(SUBJECT_WAS_ARRESTED,factor(SUBJECT_GENDER,level=c("Female","Male")),fill=SUBJECT_RACE,color=SUBJECT_RACE))+geom_jitter()+labs(x="Subjects Arrest",y="Subjects Gender",title = "Correlation of Subject Arrest vs Subject Gender filled with Race")
+```
+
+
+
+### Analysis from piachart for analyze officers by race
+
+#### The majority of the cops in terms of race are white, according to analysis. Secondly, Hispanic cops are more likely than other officers to be hurt by suspects, according to our analysis.
+
+```{r}
+ggplot(DateTime,aes(x="",y=OFFICER_INJURY,fill=OFFICER_RACE))+geom_bar(width=1,stat = "identity")+coord_polar("y",start = 0)+theme(legend.title = element_blank())
+```
+
+### Correlation Matrix
+
+##### From the Analysis we can analyse that most up the correlation between LATITUDE_AND_ LONGITUDE and STREET_NUMBER.from the analysis we can say that No relation berween OFFICER_YEARS_ON_FORCE and OFFICER_ID.and also very less correlation is between OFFICER_ID and STREET_NUMER.
+
+```{r}
+set.seed(1201)
+correlet_matrix_dataset <- DateTime[sample(nrow(DateTime), 10), ]
+# Convert relevant columns to numeric
+correlet_matrix_dataset$OFFICER_ID <- as.numeric(correlet_matrix_dataset$OFFICER_ID)
+correlet_matrix_dataset$SUBJECT_ID <- as.numeric(correlet_matrix_dataset$SUBJECT_ID)
+correlet_matrix_dataset$REPORTING_AREA <- as.numeric(correlet_matrix_dataset$REPORTING_AREA)
+correlet_matrix_dataset$OFFICER_YEARS_ON_FORCE <- as.numeric(correlet_matrix_dataset$OFFICER_YEARS_ON_FORCE)
+correlet_matrix_dataset$STREET_NUMBER <- as.numeric(correlet_matrix_dataset$STREET_NUMBER)
+correlet_matrix_dataset$LOCATION_LATITUDE <- as.numeric(correlet_matrix_dataset$LOCATION_LATITUDE)
+correlet_matrix_dataset$LOCATION_LONGITUDE <- as.numeric(correlet_matrix_dataset$LOCATION_LONGITUDE)
+correlet_matrix_dataset$BEAT <- as.numeric(correlet_matrix_dataset$BEAT)
+
+# Calculate correlation matrix
+
+c_matrix_dataset <- cor(correlet_matrix_dataset[, c("OFFICER_ID", "SUBJECT_ID", "REPORTING_AREA", "OFFICER_YEARS_ON_FORCE", "STREET_NUMBER", "LOCATION_LATITUDE", "LOCATION_LONGITUDE", "BEAT")])
+#Compute correlation P-values
+pval.cor <- cor_pmat(c_matrix_dataset)
+#Visualize the correlation matrix: method = "square" (default)
+require(ggplot2); require(ggcorrplot); 
+(G1 = ggcorrplot(c_matrix_dataset))
+(G2 = ggcorrplot(c_matrix_dataset, hc.order = TRUE))
+(G3 = ggcorrplot(c_matrix_dataset, hc.order = TRUE, type = "lower"))
+(G4 = ggcorrplot(c_matrix_dataset, hc.order = TRUE, type = "upper"))
+(G5 = ggcorrplot(c_matrix_dataset, hc.order = TRUE, type = "lower",
+                 outline.col = "white", ggtheme = ggplot2::theme_bw(), colors =
+                   c("darkgreen", "white", "blue")))
+(G7 = ggcorrplot(c_matrix_dataset, hc.order = TRUE, type = "lower", p.mat =
+                   pval.cor, sig.level = 0.01, insig = "pch", pch = 4, pch.col =
+                   "black"))
+```
+
+#### References 
+
+##### 1.www.kaggel.com
+##### 2.www.listendate.com
+##### 3.www.javatpoint.com
